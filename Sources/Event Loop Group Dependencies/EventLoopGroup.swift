@@ -1,0 +1,65 @@
+// ===----------------------------------------------------------------------===//
+//
+// This source file is part of the swift-event-loop-group-dependencies open
+// source project
+//
+// Copyright (c) 2026 Coen ten Thije Boonkkamp and the
+// swift-event-loop-group-dependencies project authors
+// Licensed under Apache License v2.0
+//
+// See LICENSE for license information
+//
+// ===----------------------------------------------------------------------===//
+
+public import Dependencies
+public import NIOCore
+import NIOEmbedded
+import NIOPosix
+
+public enum MainEventLoopGroup {}
+
+extension Dependency.Values {
+    public var mainEventLoopGroup: any EventLoopGroup {
+        get { self[MainEventLoopGroup.self] }
+        set { self[MainEventLoopGroup.self] = newValue }
+    }
+}
+
+// Accessor/conformance CO-LOCATION (di-composition-root-design.md §4.3
+// rule 2): the `\.mainEventLoopGroup` accessor above binds its
+// `self[MainEventLoopGroup.self]` subscript overload at THIS module's
+// compile time. When the accessor's module saw only the Key.Test conformance
+// (the liveValue conformance lived downstream in boiler), the accessor was
+// permanently bound to the testValue-only overload — production reads
+// resolved the single-threaded EmbeddedEventLoop and NIO crashed at boot
+// (app boot SIGSEGV; marketing main's bind fatal). The key's WIDEST
+// conformance must be visible here, so the Witness.Key (liveValue)
+// conformance lives HERE, not in a downstream module.
+//
+// The four declarations below and the accessor above move together or not at
+// all. Splitting them across modules re-arms the trap, and NO BUILD OR TEST
+// GATE CAN SEE IT: both arrangements compile, and under any test runner the
+// context is `.test`, where EmbeddedEventLoop is the correct answer. The
+// discriminating check is `event-loop-group-boot-check`, an executable that
+// runs in live context — see its `main.swift`.
+extension MainEventLoopGroup: Witness.Key {
+    public static var liveValue: any EventLoopGroup { multithreaded }
+}
+
+extension MainEventLoopGroup: Dependency.Key.Test {
+    public static var testValue: any EventLoopGroup { embedded }
+}
+
+extension MainEventLoopGroup {
+    public static var embedded: any EventLoopGroup {
+        EmbeddedEventLoop()
+    }
+
+    public static var multithreaded: any EventLoopGroup {
+        #if DEBUG
+            return MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        #else
+            return MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+        #endif
+    }
+}

@@ -1,0 +1,5 @@
+description: A type-erased clock as a dependency value for swift-dependencies.
+topics:
+  - foundations
+  - dependencies
+  - clocks
