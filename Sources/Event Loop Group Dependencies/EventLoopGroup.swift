@@ -36,12 +36,16 @@ extension Dependency.Values {
 // conformance must be visible here, so the Witness.Key (liveValue)
 // conformance lives HERE, not in a downstream module.
 //
-// The four declarations below and the accessor above move together or not at
-// all. Splitting them across modules re-arms the trap, and NO BUILD OR TEST
-// GATE CAN SEE IT: both arrangements compile, and under any test runner the
-// context is `.test`, where EmbeddedEventLoop is the correct answer. The
-// discriminating check is `event-loop-group-boot-check`, an executable that
-// runs in live context — see its `main.swift`.
+// The declarations below and the accessor above move together or not at all.
+// Splitting them across modules re-arms the trap, and A GREEN BUILD CANNOT
+// SEE IT — measured, not assumed: the split configuration was constructed
+// deliberately and compiled green, because overload resolution succeeds in
+// both arrangements. What does catch it is a LIVE read: the §4.2 tripwire
+// traps when this key resolves through the `Key.Test` overload in `.live`
+// mode. `Witness.Context.currentMode` is `.live` unless a scope sets it, so
+// the test target's unscoped read is such a read, and
+// `event-loop-group-boot-check` is another that additionally exercises a
+// real socket bind.
 extension MainEventLoopGroup: Witness.Key {
     public static var liveValue: any EventLoopGroup { multithreaded }
 }

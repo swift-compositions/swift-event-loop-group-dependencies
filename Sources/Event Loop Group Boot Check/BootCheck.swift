@@ -20,21 +20,27 @@
 // `Witness.Key.Test` overload instead and every production read resolves
 // `EmbeddedEventLoop` — silently, forever.
 //
-// Neither half of the standard gate can see this:
+// `swift build` is blind to it — MEASURED, not assumed: the split
+// configuration was constructed deliberately and compiled GREEN, because
+// overload resolution succeeds in both arrangements; it just succeeds
+// differently.
 //
-//   * `swift build` — BOTH arrangements compile. Overload resolution
-//     succeeds in each; it just succeeds differently.
-//   * `swift test`  — `Dependency.Context.detect()` returns `.test` whenever
-//     `XCTestConfigurationFilePath` or `SWIFT_TESTING` is set, and in test
-//     context `EmbeddedEventLoop` is the CORRECT answer. A test asserting
-//     "not embedded" fails on a correct build. The test target cannot
-//     discriminate in either direction.
+// `swift test` is NOT blind, contrary to what this comment first claimed.
+// `Witness.Context.currentMode` returns `.live` when no scope has set a
+// mode, and nothing calls `Dependency.Context.detect()` automatically — so
+// an unscoped read inside the test target is a LIVE read, and the §4.2
+// tripwire traps the split there too. The package's own test target does
+// catch this.
 //
-// So the check must run where the defect manifests: live context, no
-// override registered — which is exactly the configuration real consumers
-// use, since repotraffic and the tenthijeboonkkamp server both retired their
-// explicit `\.mainEventLoopGroup` overrides once the conformance was
-// co-located, and therefore have nothing masking a regression.
+// What this executable adds over the test target:
+//   * it exercises a REAL socket bind on the resolved group, which no test
+//     here does, and a fatal bind was the recorded production symptom;
+//   * it runs as a standalone process in the shape an app boots in, with no
+//     override registered — the configuration real consumers use, since
+//     repotraffic and the tenthijeboonkkamp server both retired their
+//     explicit `\.mainEventLoopGroup` overrides once the conformance was
+//     co-located, and so have nothing masking a regression;
+//   * it fails with a diagnostic naming the cause rather than a trap.
 //
 // Exit 0 = the accessor is bound to the live overload and the resolved group
 // survives a real socket bind. Exit 1 = it is not; see the diagnostic.

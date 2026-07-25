@@ -1,5 +1,6 @@
-description: A type-erased clock as a dependency value for swift-dependencies.
+description: The process's main NIO event loop group as a dependency value.
 topics:
   - foundations
   - dependencies
-  - clocks
+  - nio
+  - event-loop-group

@@ -14,36 +14,41 @@
 import Dependencies
 import NIOCore
 import NIOEmbedded
+import NIOPosix
 import Testing
 
 @testable import Event_Loop_Group_Dependencies
 
 @Suite("MainEventLoopGroup")
 struct MainEventLoopGroupTests {
-    /// In test context the accessor is expected to resolve `testValue`. This
-    /// is the correct answer here and NOT evidence about the live binding —
-    /// `event-loop-group-boot-check` is the only gate that can speak to that.
-    @Test("resolves the embedded group in test context")
-    func `resolves the embedded group in test context`() {
+    /// `Witness.Context.currentMode` returns `.live` when no scope has set a
+    /// mode, and nothing calls `Dependency.Context.detect()` automatically —
+    /// so an unscoped read inside the test target resolves the LIVE value,
+    /// not `testValue`. That makes this a genuine co-location assertion: were
+    /// the `Witness.Key` conformance to stop being visible to the accessor's
+    /// module, this read would route through the `Key.Test` overload and the
+    /// §4.2 tripwire would trap the run.
+    @Test
+    func `an unscoped read resolves the live value`() {
         @Dependency(\.mainEventLoopGroup) var group
-        #expect(group is EmbeddedEventLoop)
+        #expect(group is MultiThreadedEventLoopGroup)
+        #expect(!(group is EmbeddedEventLoop))
     }
 
-    @Test("an explicit override wins over the context default")
+    @Test
     func `an explicit override wins over the context default`() {
-        let injected = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let injected = EmbeddedEventLoop()
         withDependencies {
             $0.mainEventLoopGroup = injected
         } operation: {
             @Dependency(\.mainEventLoopGroup) var group
-            #expect(group is MultiThreadedEventLoopGroup)
+            #expect(group is EmbeddedEventLoop)
         }
     }
 
     /// Both conformances must be visible from this module. If either is
-    /// missing the package no longer satisfies §4.3 rule 2, and the failure
-    /// mode is silent at every other gate.
-    @Test("declares both the live and the test witness")
+    /// missing the package no longer satisfies §4.3 rule 2.
+    @Test
     func `declares both the live and the test witness`() {
         #expect(MainEventLoopGroup.liveValue is MultiThreadedEventLoopGroup)
         #expect(MainEventLoopGroup.testValue is EmbeddedEventLoop)

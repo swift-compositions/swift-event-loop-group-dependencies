@@ -70,6 +70,7 @@ let package = Package(
                 .product(name: "Dependencies Test Support", package: "swift-dependencies"),
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOEmbedded", package: "swift-nio"),
+                .product(name: "NIOPosix", package: "swift-nio"),
             ]
         ),
     ],
