@@ -19,8 +19,16 @@ import Testing
 
 @testable import Event_Loop_Group_Dependencies
 
-@Suite("MainEventLoopGroup")
-struct MainEventLoopGroupTests {
+extension MainEventLoopGroup {
+    @Suite("MainEventLoopGroup")
+    struct Test {
+        @Suite struct Unit {}
+        @Suite struct `Edge Case` {}
+        @Suite struct Integration {}
+    }
+}
+
+extension MainEventLoopGroup.Test.Integration {
     /// `Witness.Context.currentMode` returns `.live` when no scope has set a
     /// mode, and nothing calls `Dependency.Context.detect()` automatically —
     /// so an unscoped read inside the test target resolves the LIVE value,

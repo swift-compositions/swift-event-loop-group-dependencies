@@ -52,7 +52,9 @@ import NIOEmbedded
 import NIOPosix
 
 @main
-struct BootCheck {
+struct BootCheck {}
+
+extension BootCheck {
     static func main() async {
         @Dependency(\.mainEventLoopGroup) var group: any EventLoopGroup
 
@@ -114,6 +116,8 @@ struct BootCheck {
         let bootstrap = ServerBootstrap(group: group)
             .serverChannelOption(.backlog, value: 1)
 
+        // swift-linter:disable:next do throws for typed catch
+        // REASON: NIOCore.EventLoopFuture.get() is an untyped cross-module throwing API.
         do {
             let channel = try await bootstrap.bind(host: "127.0.0.1", port: 0).get()
             let port = channel.localAddress?.port.map(String.init) ?? "unknown"
@@ -125,7 +129,9 @@ struct BootCheck {
 
         print("BOOT CHECK PASSED: live context, MultiThreadedEventLoopGroup, real bind")
     }
+}
 
+extension BootCheck {
     static func fail(_ message: String) -> Never {
         print("BOOT CHECK FAILED: \(message)")
         exit(1)
