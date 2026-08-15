@@ -19,6 +19,12 @@ import NIOPosix
 public enum MainEventLoopGroup {}
 
 extension Dependency.Values {
+    // REASON: the injectable event-loop-group boundary preserves the
+    // heterogeneous live (`MultiThreadedEventLoopGroup`) vs. test
+    // (`EmbeddedEventLoop`) conformers this dependency switches between;
+    // `EventLoopGroup` is a NIO protocol type with no single concrete
+    // spelling that covers both.
+    // swiftlint:disable:next no_any_protocol_existential
     public var mainEventLoopGroup: any EventLoopGroup {
         get { self[MainEventLoopGroup.self] }
         set { self[MainEventLoopGroup.self] = newValue }
@@ -47,18 +53,30 @@ extension Dependency.Values {
 // `event-loop-group-boot-check` is another that additionally exercises a
 // real socket bind.
 extension MainEventLoopGroup: Witness.Key {
+    // REASON: see the injectable event-loop-group boundary note above —
+    // `liveValue` must share the existential return type of the accessor
+    // it overloads.
+    // swiftlint:disable:next no_any_protocol_existential
     public static var liveValue: any EventLoopGroup { multithreaded }
 }
 
 extension MainEventLoopGroup: Dependency.Key.Test {
+    // REASON: see the injectable event-loop-group boundary note above —
+    // `testValue` must share the existential return type of the accessor
+    // it overloads.
+    // swiftlint:disable:next no_any_protocol_existential
     public static var testValue: any EventLoopGroup { embedded }
 }
 
 extension MainEventLoopGroup {
+    // REASON: see the injectable event-loop-group boundary note above.
+    // swiftlint:disable:next no_any_protocol_existential
     public static var embedded: any EventLoopGroup {
         EmbeddedEventLoop()
     }
 
+    // REASON: see the injectable event-loop-group boundary note above.
+    // swiftlint:disable:next no_any_protocol_existential
     public static var multithreaded: any EventLoopGroup {
         #if DEBUG
             return MultiThreadedEventLoopGroup(numberOfThreads: 1)
