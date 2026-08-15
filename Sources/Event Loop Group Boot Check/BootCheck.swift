@@ -56,6 +56,10 @@ struct BootCheck {}
 
 extension BootCheck {
     static func main() async {
+        // REASON: `\.mainEventLoopGroup` resolves to the injectable
+        // event-loop-group boundary (see Event Loop Group Dependencies),
+        // which is `any EventLoopGroup` by design.
+        // swiftlint:disable:next no_any_protocol_existential
         @Dependency(\.mainEventLoopGroup) var group: any EventLoopGroup
 
         // `__DependencyContext`, not `Dependency.Context`: the latter is a
