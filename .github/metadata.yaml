@@ -1,6 +1,6 @@
 description: The process's main NIO event loop group as a dependency value.
 topics:
-  - foundations
+  - compositions
   - dependencies
   - nio
   - event-loop-group
